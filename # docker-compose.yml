@@ -1,0 +1,36 @@
+# docker-compose.yml
+version: "3.9"
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: raguser
+      POSTGRES_PASSWORD: ragpass
+      POSTGRES_DB:  ragdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init.sql
+
+  airflow:
+    image: apache/airflow:2.9.0
+    environment:
+      AIRFLOW__CORE_EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE_SQL_ALCHEMY_CONN: postgresql+psycopg2://raguser:ragpass@postgres/ragdb
+      AIRFLOW__CORE_LOAD_EXAMPLES: "false"
+    depends_on:
+      - postgres
+    ports:
+      - "8080:8080"
+    volumes:
+      -./dags:/opt/airflow/dags
+    command: >
+      bash -c "airflow db migrate &&
+              airflow users create --username admin --password admin
+                --firstname Air --lastname Flow --role Admin
+                --email admin@example.com &&
+              airflow webserver & airflow scheduler"
+volumes:
+  pgdata:
