@@ -29,4 +29,23 @@ class DocumentLoader:
         logger.info(f"Loaded {len(docs)} documents from {self.data_dir}")
         return docs
 
+    def _load_text(self, path: Path) -> RawDocument:
+        content = path.read_text(encoding="utf-8", errors="ignore")
+        return RawDocument(
+            source=str(path.relative_to(self.data_dir)),
+            content=content,
+            metadata={"file_type": path.suffix, "size_bytes": path.stat().st_size},
+        )
+
+    def _load_pdf(self, path: Path) -> RawDocument:
+        # pip install pypdf
+        from pypdf import PdfReader
+        reader = PdfReader(str(path))
+        content = "\n\n".join(page.extractText() for page in reader.pages)
+        return RawDocument(
+            source=str(path.relative_to(self.data_dir)),
+            content=content,
+            metadata={"file_type": ".pdf", "num_pages": len(reader.pages)},
+        )
+
 
